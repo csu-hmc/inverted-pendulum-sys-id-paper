@@ -3,6 +3,7 @@ Authors
 
 - Jason K. Moore
 - Antonie J. van den Bogert
+- Sandra K. Hnat
 
 Problem introduction
 ====================
@@ -58,6 +59,39 @@ Indirect Approach: Direct Collocation
   - Speed of computation
 
 - Can we solve a 9 link pendulum? (same # dof's as basic walking model)
+
+Data Collection/Testing Protocol
+=====================================
+
+-Perturbation Signals
+	-Simulink diagrams and MATLAB code
+		-twice integrated white noise into high pass Butterworth and saturated
+	-signals generated around ~8-10% standard dev. of the average speed
+		-done ad hoc through coding, also done "experimentally"
+		
+-Equipment
+	-Cortex 3 for motion capture (marker coordinate locations and GRF)
+	-D.Flow 3.15-3.16 for VR program, treadmill manipulation, and data recording
+	-Forcelink R-mill for the treadmill (+/- 0.05 meters mediolateral displacement 
+	and +/- 10 degrees sagittal pitch
+	-10 Osprey cameras 
+	-Data recorded (GRF, marker coordinates, belt speed, etc) at 100 Hz
+	
+-Protocol
+	-describe the testing procedure for each subject and how that was handled
+	with event timing in D-Flow 
+	-describe briefly in words the D-Flow program and what it's doing
+	-47 marker set, maybe include diagram in supplementary material
+	-harness on subject, etc.
+	
+-Compensation Techniques (maybe)
+	-inertial artifacts due to platform movement
+		-did not use platform movement, but implemented in code because we intended to move
+		the platform 
+		
+-code stuff
+	-all signals filtered at 6 Hz low-pass Butterworth filter
+	-joint angles and moments calculated from 2D inverse dynamics program 
 
 Plots
 -----
