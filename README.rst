@@ -9,8 +9,18 @@ Authors
 - Jason K. Moore
 - Antonie J. van den Bogert
 
+Software
+========
+
+All of the source code for the analysis is currently in this repository:
+
+https://github.com/csu-hmc/inverted-pendulum-sys-id
+
+Outline
+=======
+
 Introduction
-============
+------------
 
 - cite direct collocation for open loop optimal controls
 
@@ -37,7 +47,7 @@ Introduction
 
 
 The system
-==========
+----------
 
 - Show n-link pendulum on cart diagram.
 - Describe LQR controller.
@@ -47,7 +57,7 @@ The system
 - System ID cost function, same for all problems.
 
 Direct Approach
-===============
+---------------
 
 - Describe direct approach, cite van der Kooij, guy from McGill, and Ljung.
 - Describe the mathematical formulation
@@ -56,7 +66,7 @@ Direct Approach
 - Say something about speed of computation.
 
 Indirect Approach: Shooting
-===========================
+---------------------------
 
 - Describe shooting.
 - Cite Tom Uchida's homotopy stuff.
@@ -69,7 +79,7 @@ Indirect Approach: Shooting
   - It doesn't matter how much you perturb??
 
 Indirect Approach: Direct Collocation
-=====================================
+-------------------------------------
 
 - Should we show the single pendulum id problem that Ton did which came from
   Tom's paper?
@@ -100,14 +110,14 @@ Indirect Approach: Direct Collocation
 - What is the appropriate size of h to get an accurate-enough solution?
 
 Plots
------
+~~~~~
 
 - For the one link pendulum run optimizations with the known gains as the
   initial guess and decrease h to show how the gains converge to the known
   gains and h gets smaller.
 
 Comparison
-==========
+----------
 
 - Maybe show something that compares the computation time and accuracy of
   solution for all three methods.
