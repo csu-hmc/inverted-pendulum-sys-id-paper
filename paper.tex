@@ -1,0 +1,48 @@
+\documentclass{article}
+
+\title{Controller parameter identification using direct collocation}
+
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+Given a mathematical model of a system operating inside a closed loop system
+and experimental measurements of data collected from that system, it is common
+to attempt to identify parameters of the mathematical model that cause the
+models response to the measured inputs to best fit the measured output data.
+For linear systems, there are a variety of solutions to these identification
+problems, but for non linear systems the solution amounts to solving a
+optimization problem which is most certinaly laden with many local optima.
+
+We are particularly interested in identifying the parameters of the controller
+in a closed loop system. It is theorized that creatures operate, at least
+partially, under a closed loop during locomotion. Humans for example have
+proprioceptive, vestibular, etc sensors that provide a rich set of internal
+measurements that guide our choice for muscle activation. If the map from
+sensastion to acuatation can be identified, then the engineer will have a
+mathematical model of the highly evolved control system human's employ that can
+be used for biomicry in robotic controls. This is potentially useful for
+humanoid robots and assitive devices for both able body and disabled
+locomoters.
+
+In this paper, we present the use of direct collocation to identify the
+controller parameters of controled inverted pendulum that is excited by
+pseudo-random external inputs. The method is compared to more traditional
+shooting optimization methods and also a direct identification method.
+
+Direct collocation is more commonly used to find the open loop controls that
+drive a mathematical model to track a particular trajectory.
+
+\section{Closed Loop System Model Description}
+
+Herein we make use of a classic planar n-link inverted pendulum on a cart as a
+our plant model. The cart with mass, $m_o$ can move laterally but is restricted
+to the origin by a linear spring and damper. The links are masseless and there
+is a point mass at each link joint. The inputs to the open loop system are a
+lateral force which acts on the cart and ``joint torques'' at each joint which
+apply an equal and opposite torque between the adjacent joints.
+
+\end{document}
