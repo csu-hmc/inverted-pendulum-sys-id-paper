@@ -3,6 +3,13 @@ Journal
 
 Jason would like to submit this to PLoS One.
 
+Notes on editing the files
+==========================
+
+- The README is in RestructuredText format. See
+  http://docutils.sourceforge.net/docs/user/rst/quickref.html for tips on the
+  syntax.
+
 Authors
 =======
 
@@ -33,7 +40,7 @@ Introduction
 
 - cite methods for open loop control identification for humans
 
-   - CMC
+   - CMC?
    - Ton's work
 
 - cite work on control identification
@@ -41,8 +48,7 @@ Introduction
    - balance control: van der Kooij, Park and Kuo, etc, etc
    - bicycle/motorcycle stuff: van lunteren and stassen, eaton, doyle, de
      Lange, my diss
-   - There is control id in the aircraft world, mostly simple linear systems I
-     think.
+   - There is control id in the aircraft world, but mostly simple linear systems.
    - There is stuff in the automobile world
 
 
