@@ -121,6 +121,9 @@ Plots
 - For the one link pendulum run optimizations with the known gains as the
   initial guess and decrease h to show how the gains converge to the known
   gains and h gets smaller.
+- I'd like to know if increasing the amount of data increases the likelihood of
+  getting the correct answer, as I don't necessarily see that with random
+  experiments. But that is anecdotal.
 
 Comparison
 ----------
