@@ -122,4 +122,42 @@ $y$.
   y = x + v(t)
 \end{align}
 
+\section{Direct Collocation}
+
+We make use of direct collocation to transform the parameter identifaction
+problem into a large scale non-linear programming problem. Do do so we first
+assume that the discrete integral can be described by backward Euler
+integration, giving an approximation of the state derivative as
+
+\begin{align}
+  x_{i} = x_{i-1} + h f(x_{i}, t_{i}) \\
+  \dot{x} \approx \frac{x_i - x_{i-1}}{h} =  f(t_i, x_i)
+\end{align}
+
+For $t_i$ where $i=2 \dots N$ and the above assumption, we form $N-1$ algebraic
+equations which must be satisfied.
+
+\begin{align}
+  0 = \mathbf{c}(\mathbf{\theta}) \\
+  0 = f_i(x_{i}, x_{i-1}, u_i, p, h)
+\end{align}
+
+The objective function is the linear least squares norm which minimizes the
+error in the measured data with respect to the model's trajectory.
+
+\begin{equation}
+  J(\theta) = h \sum_{i=1}^N \left[y_{mi} - y_i(\theta)\right]^2
+\end{equation}
+
+The NLP problem can be formed
+
+\begin{align}
+  \min_{\theta \in \Re^{n}}  J(\theta) \\
+  c(\theta) = 0 \\
+  \theta^L \leq \theta \leq \theta^U
+\end{align}
+
+The goal is to estimate the uknown parameters $p$, the controller gains in our
+case, given noisy measurements, $y_m_i$.
+
 \end{document}
