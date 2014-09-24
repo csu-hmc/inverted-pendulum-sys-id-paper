@@ -29,24 +29,19 @@ Outline
 Introduction
 ------------
 
-- why we do this: (1) in humans, nobody designed the controller so we need to identify it,
-  (2) in humans, we can't disconnect the controller so all testing is in closed loop
+- why we do this: (1) in humans, nobody designed the controller so we need to identify it, (2) in humans, we can't disconnect the controller so all testing is in closed loop
   
-- cite well known problems with closed loop sys-id & potential solutions. van der Kooij.  most work in engineering
-  is linear systems which is not appropriate here.  maybe cite some of these
+- cite well known problems with closed loop sys-id & potential solutions. van der Kooij.  most work in engineering is linear systems which is not appropriate here.  maybe cite some of these
    - bicycle/motorcycle stuff: van lunteren and stassen, eaton, doyle, de
      Lange, my diss
    - There is control id in the aircraft world, but mostly simple linear systems.
    - There is stuff in the automobile world
 
-- justify our choice of assuming a plant model.  related work: Park & Kuo (human standing), Uchida.
-  these were done with shooting
+- justify our choice of assuming a plant model.  related work: Park & Kuo (human standing), Uchida. these were done with shooting
 
 - cite shooting (Anderson & Pandy) & direct collocation which is much more efficient for finding open loop optimal controls (Ackermann & van den Bogert)
 
-- shooting has been extended towards closed loop controls (e.g. Wang or Dorn's work) with performance based cost function
-  so it would be straightforward to extend this towards (1) collocation, and (2) a tracking cost function to find controllers
-  that are human-like
+- shooting has been extended towards closed loop controls (e.g. Wang or Dorn's work) with performance based cost function so it would be straightforward to extend this towards (1) collocation, and (2) a tracking cost function to find controllers that are human-like
 
 - state the aims of this paper
 
@@ -55,8 +50,7 @@ Methods
 -------
 
 - Model system and data collection
-  - Show n-link pendulum on cart diagram.  Ton: Is it sufficient to do it on a 2-link system?
-    And should this have human-like dimensions?  If so, we're basically replicating Park & Kuo's problem which
+  - Show n-link pendulum on cart diagram.  Ton: Is it sufficient to do it on a 2-link system? And should this have human-like dimensions?  If so, we're basically replicating Park & Kuo's problem which
     could be solved quite well without these new methods.
   - Describe LQR controller.
   - Closed loop system dynamics.
@@ -65,9 +59,7 @@ Methods
 - System ID cost function, same for all problems.
 
 - Direct approach
-  - TvdB: It would be good if we could leave this out.  Talk about it in Introduction and move past it.
-    Alternatively, if we include this, I think it is OK to just do this on data from one instance of the noise and perturbation
-    to demonstrate the problem.  Then use the same data for the indirect work.
+  - If we include this, I think it is OK to just do this on data from one instance of the noise to demonstrate how this introduces bias.  Then use the same data for the indirect work.
   - Describe direct approach, cite van der Kooij, guy from McGill, and Ljung.
   - Describe the mathematical formulation
   - Show a plot that shows the error in parameters as a function of the ratio of
@@ -78,8 +70,7 @@ Methods
   - Same here: I would prefer to talk about this in Introduction (with citations) and conclude there that you don't want to do this.
   - Describe shooting.
   - Cite Tom Uchida's homotopy stuff.
-  - What algorithm should I use? Maybe the Python version of the CMAES alg would
-    be good to use.
+  - What algorithm should I use? Maybe the Python version of the CMAES alg would be good to use.
   - The main points here will probably be:
     - How long it takes to find the solution (computation time)?
     - Sensitivity to initial guesses
