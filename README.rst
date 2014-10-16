@@ -1,7 +1,8 @@
 Journal
 =======
 
-Jason would like to submit this to PLoS One.
+Jason would like to submit this to PLoS One or another suitable Open Access
+Journal.
 
 Notes on editing the files
 ==========================
@@ -9,6 +10,8 @@ Notes on editing the files
 - The README is in RestructuredText format. See
   http://docutils.sourceforge.net/docs/user/rst/quickref.html for tips on the
   syntax.
+- The paper is written in LaTeX and we will adopt the class files for whatever
+  journal we submit to.
 
 Authors
 =======
@@ -36,8 +39,9 @@ Introduction
 - Why we do this: (1) in humans, nobody designed the controller so we need to
   identify it, (2) in humans, we can't disconnect the controller so all testing
   is in closed loop.
+- Cite the Betts et. al 2003 paper.
 - cite well known problems with closed loop sys-id & potential solutions. van
-  der Kooij.  Most work in engineering is linear systems which is not
+  der Kooij. Most work in engineering is linear systems which is not
   appropriate here. Maybe cite some of these:
 
    - bicycle/motorcycle stuff: van lunteren and stassen, eaton, doyle, de
@@ -60,58 +64,93 @@ Methods
 
 - Model system and data collection
 
-  - Show n-link pendulum on cart diagram.  Ton: Is it sufficient to do it on a
-    2-link system? And should this have human-like dimensions?  If so, we're
-    basically replicating Park & Kuo's problem which could be solved quite well
-    without these new methods.
-  - Describe LQR controller.
-  - Closed loop system dynamics.
-  - Describe noise inputs (process and measurement).
-  - Describe simulation, use same data for all methods below.
+  - Show two link planar standing human on moving platform diagram. (Park 2004
+    model).
+  - Describe the plant (even show the equations).
+  - Describe controller, state feedback, and gains chosen from Park 2004.
+  - Describe noise inputs (reference noise, platform acceleration, and
+    measurement noise).
 
-- System ID cost function, same for all problems.
+    Measurement noise should be added to the states, torques, and acceleration
+    before introduced into the two algorithms.
+
+  - Describe the simulations.
+
+    - We need N simulations with increasing platform perturbation. How long? 30
+      seconds? At what sample rate?
+    - Simulate the non-linear model with reference noise.
+
 - Direct approach
 
-  - If we include this, I think it is OK to just do this on data from one
-    instance of the noise to demonstrate how this introduces bias.  Then use
-    the same data for the indirect work.
   - Describe direct approach, cite van der Kooij, guy from McGill, and Ljung.
-  - Describe the mathematical formulation
-  - Show a plot that shows the error in parameters as a function of the ratio of
-    the process and measurement.
+  - Describe the mathematical formulation and the objective function.
+  - Show a plot that shows the error in parameters identification as a function
+    of perturbation magnitude.
   - Say something about speed of computation.
-
-- Indirect Approach: Shooting
-
-  - Same here: I would prefer to talk about this in Introduction (with
-    citations) and conclude there that you don't want to do this.
-  - Describe shooting.
-  - Cite Tom Uchida's homotopy stuff.
-  - What algorithm should I use? Maybe the Python version of the CMAES alg
-    would be good to use.
-  - The main points here will probably be:
-
-    - How long it takes to find the solution (computation time)?
-    - Sensitivity to initial guesses
-    - It doesn't matter how much you perturb??
 
 - Indirect Approach: Direct Collocation
 
-  - Should we show the single pendulum id problem that Ton did which came from
-    Tom's paper? Neither.
-  - Describe how we setup the problem
-    - Cost function (Park & Kuo included joint torque tracking in the cost
-      function - better not do that, torques are unreliable, if they can be
-      measured at all.
-    - Backward Euler
-    - Constraints
-    - Free variables
-    - Initial guess
+  - Objective function: minimize error in joint angles.
+  - Constraints: equations of motion
+  - Bounds
+  - Backward Euler
+  - Free variables
+  - Initial guess
+  - mesh refinement
 
 - Describe software and implementation
 
-  - SymPy
+  - SymPy + opty (sympy based direct collocator)
   - NLP solver: IPOPT
+
+Results
+-------
+
+Direct Approach
+~~~~~~~~~~~~~~~
+
+- Show and example parameter identification result.
+
+  - This should have a simluation against a validation data set.
+
+- Show the effect of the perturbation on the parameter id.
+- Show the effect of longer duration data.
+- Computational cost.
+
+Maybe the last two can be a 3D graph with input data duration and perturbation
+magnitude as vs the identified parameters (8 parameters... so 8 graphs?).
+
+Indirect Approach
+~~~~~~~~~~~~~~~~~
+
+- Show and example parameter identification result.
+
+  - Include the identified numbers (and their uncertainties?).
+  - This should have a simluation against a validation data set.
+
+- Show the effect of the perturbation on the parameter id.
+- Show the effect of longer duration data.
+- Computational cost.
+
+Discussion
+----------
+
+- Computation time. If we did not present results from shooting, it would be
+  hard to wow the reader with how much faster this is and less sensitive to
+  initial guess. So maybe do shooting after all, especially if code already
+  exists.
+- Sensitivity to initial guess. Also compare to shooting (if we did that).
+  Provide general recommendations (if we can) for generating an initial guess
+  that works.
+- The collocation method scales well to long duration movement data, so we can
+  potentially identify controllers with many parameters. For example neural
+  networks.
+- Our results show that this approach is computationally feasible and gives
+  accurate results. We are ready to apply this to human control. Human motion
+  has slightly more complexity and nonlinearity which may affect convergence.
+
+Questions
+=========
 
 - Describe "experimental" protocol and data collected (should match the aims
   stated at the end of Introduction)
@@ -121,7 +160,7 @@ Methods
     number of links. for the same initial guess, of course.
   - Do we want to test how robust the estimated gains are with respect to model
     errors? This would be important if you were to interpret results as human
-    gains.  This would not be important if you asked the question what control
+    gains. This would not be important if you asked the question what control
     the model requires to make it behave like a human.
   - Make sure to design "experiments" to answer these questions:
 
@@ -138,29 +177,8 @@ Methods
       with the known gains as the initial guess and decrease h to show how the
       gains converge to the known gains and h gets smaller.
 
-Results
--------
-
-- Should match exactly the final section of Methods
 - I'd like to know if increasing the amount of data increases the likelihood of
   getting the correct answer, as I don't necessarily see that with random
   experiments. But that is anecdotal. Ton: Not here, if you can't design an
   experiment to answer this question, it's better to report such anecdotal
   findings in the Discussion.
-
-Discussion
-----------
-
-- Computation time.  If we did not present results from shooting, it would be
-  hard to wow the reader with how much faster this is and less sensitive to
-  initial guess. So maybe do shooting after all, especially if code already
-  exists.
-- Sensitivity to initial guess. Also compare to shooting (if we did that).
-  Provide general recommendations (if we can) for generating an initial guess
-  that works.
-- The collocation method scales well to long duration movement data, so we can
-  potentially identify controllers with many parameters. For example neural
-  networks.
-- Our results show that this approach is computationally feasible and gives
-  accurate results. We are ready to apply this to human control. Human motion
-  has slightly more complexity and nonlinearity which may affect convergence.
