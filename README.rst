@@ -1,8 +1,7 @@
 Journal
 =======
 
-We will submit this to PLoS One or another suitable Open Access
-Journal.
+We will submit this to PLoS One or another suitable Open Access Journal.
 
 Notes on editing the files
 ==========================
@@ -17,7 +16,6 @@ Authors
 =======
 
 - Jason K. Moore
-- Samin Askarian
 - Antonie J. van den Bogert
 
 Software
@@ -51,15 +49,18 @@ Introduction
 - justify our choice of assuming a plant model. related work: Park & Kuo
   (human standing), Uchida. these were done with shooting
 - Cite the Betts et. al 2003 paper.
-- Gait is nonlinear, can't use frequency domain methods. Cite shooting (Anderson & Pandy) & direct collocation which is much more
-  efficient for finding open loop optimal controls (Ackermann & van den Bogert)
+- Gait is nonlinear, can't use frequency domain methods. Cite shooting
+  (Anderson & Pandy) & direct collocation which is much more efficient for
+  finding open loop optimal controls (Ackermann & van den Bogert)
 - shooting has been extended towards closed loop controls (e.g. Wang or Dorn's
   work) with performance based cost function so it would be straightforward to
   extend this towards (1) collocation, and (2) a tracking cost function to find
   controllers that are human-like
-- state the aims of this paper: (1) develop a method to ... (2) evaluate it on... and compare to direct approach
+- state the aims of this paper: (1) develop a method to ... (2) evaluate it
+  on... and compare to direct approach
 
-(it's not quite a logical sequence yet, we may need to remove things that don't fit well)
+(it's not quite a logical sequence yet, we may need to remove things that don't
+fit well)
 
 Methods
 -------
@@ -89,10 +90,11 @@ Methods
   - Show a plot that shows the error in parameters identification as a function
     of perturbation magnitude.
   - Say something about speed of computation.
-  
+
 - Indirect Approach: Shooting
-  - Straightforward method.  Avoid clever tricks like Uchida and Samin did to avoid local optima.
-    We want to show that this is slow and sensitive to initial guess.
+  - Straightforward method.  Avoid clever tricks like Uchida and Samin did to
+    avoid local optima.  We want to show that this is slow and sensitive to
+    initial guess.
 
 - Indirect Approach: Direct Collocation
 
@@ -101,8 +103,9 @@ Methods
   - Bounds
   - Backward Euler
   - Free variables
-  - Initial guess (let's use one method to generate an initial guess that works well for us, alternatives,
-    and how they worked, can be mentioned in Discussion)
+  - Initial guess (let's use one method to generate an initial guess that works
+    well for us, alternatives, and how they worked, can be mentioned in
+    Discussion)
   - mesh refinement
 
 - Describe software and implementation
@@ -129,9 +132,11 @@ magnitude as vs the identified parameters (8 parameters... so 8 graphs?).
 
 (two gains in two joints should be 4 parameters?)
 
-(Will results show that we need long duration?  Probably yes, if the external perturbation is small enough.
-In fact, Park & Kuo used a very large perturbation and found that feedback gains depended on the magnitude of perturbation.
-Which casts some doubt on whether they are identifying the actual control law.  It should always be the same, right?)
+(Will results show that we need long duration?  Probably yes, if the external
+perturbation is small enough.  In fact, Park & Kuo used a very large
+perturbation and found that feedback gains depended on the magnitude of
+perturbation.  Which casts some doubt on whether they are identifying the
+actual control law. It should always be the same, right?)
 
 Indirect Approach
 ~~~~~~~~~~~~~~~~~
@@ -151,7 +156,7 @@ Discussion
 - Computation time. If we did not present results from shooting, it would be
   hard to wow the reader with how much faster this is and less sensitive to
   initial guess. So maybe do shooting after all, especially if code already
-  exists.  
+  exists.
 - Sensitivity to initial guess. Also compare to shooting (if we did that).
   Provide general recommendations (if we can) for generating an initial guess
   that works.
