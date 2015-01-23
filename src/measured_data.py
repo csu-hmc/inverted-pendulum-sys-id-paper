@@ -94,12 +94,10 @@ class DataGenerator(object):
         # The initial conditions of the states are always zero.
         x = odeint(self.rhs, np.zeros(4), self.time, args=(self.rhs_args,))
 
-        # FIXME : This is incorrect! The torques are a function of the gain
-        # matrix and the error, which can be corrupted by the reference
-        # noise.
         # Back out the torques used in the control.
         # N x 4 = ((2 x 4) * (4 x N)).T
-        u = -np.dot(self.model.numerical_gains, x.T).T
+        u = np.dot(self.model.numerical_gains,
+                   (self.ref_noise - x).T).T
 
         self.actual['x'] = x
         self.actual['u'] = u
