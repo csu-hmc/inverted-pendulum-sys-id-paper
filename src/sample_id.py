@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from model import PlanarStandingHumanOnMovingPlatform
+from model import QuietStandingModel
 from measured_data import DataGenerator
 import direct_identification
 import indirect_collocation
@@ -21,7 +21,7 @@ torque_noise_std = 0.0  # 0.5
 print('Generating equations of motion.')
 # We are going to scale the gains so that the values we search for with
 # IPOPT are all close to 0.5 instead of the large gain values.
-h = PlanarStandingHumanOnMovingPlatform(scaled_gains=0.5 * np.ones((2, 4)))
+h = QuietStandingModel(scaled_gains=0.5 * np.ones((2, 4)))
 h.derive()
 
 print('Generating simulated noisy data.')

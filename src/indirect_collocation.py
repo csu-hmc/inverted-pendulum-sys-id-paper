@@ -76,7 +76,7 @@ def identify(num_nodes, time_interval, measured_states,
         The measured state trajectories.
     measured_platform_accel : ndarray, shape(num_nodes,)
         The measured platform acceleration.
-    model : instance of PlanarStandingHumanOnMovingPlatform
+    model : instance of QuietStandingModel
         This should be a model which has already be derived.
 
     Returns

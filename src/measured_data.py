@@ -6,7 +6,7 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 from opty.utils import sum_of_sines
 
-from model import PlanarStandingHumanOnMovingPlatform
+from model import QuietStandingModel
 
 # TODO : should all noises be a on a per variable basis?
 # TODO: ref_noise_std should probably be broken up like coordinate_noise_std
@@ -33,7 +33,7 @@ class DataGenerator(object):
             states.
         platform_pos_mag : float
             The magnitude of the sine motion of the platform in meters.
-        model : instance of PlanarStandingHumanOnMovingPlatform
+        model : instance of QuietStandingModel
             This should be a model which has already be derived.
 
         Notes
@@ -51,7 +51,7 @@ class DataGenerator(object):
         self.platform_pos_mag = platform_pos_mag
 
         if model is None:
-            self.model = PlanarStandingHumanOnMovingPlatform()
+            self.model = QuietStandingModel()
             self.model.derive()
         else:
             self.model = model

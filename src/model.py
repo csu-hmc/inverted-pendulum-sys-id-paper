@@ -13,7 +13,7 @@ sym_kwargs = {'positive': True, 'real': True}
 me.dynamicsymbols._t = sy.symbols('t', **sym_kwargs)
 
 
-class PlanarStandingHumanOnMovingPlatform(object):
+class QuietStandingModel(object):
     """Generates the symbolic equations of motion of a 2D planar two body
     model representing a human standing on a antero-posteriorly moving
     platform similar to the one found in [Park2004]_.
