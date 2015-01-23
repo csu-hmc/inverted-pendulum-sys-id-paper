@@ -52,3 +52,8 @@ class ControllerIdentifier(object):
         self.singular_values = res[3]
 
         return res[0].T
+
+
+def identify(input_traj, state_traj):
+    ider = ControllerIdentifier(input_traj, state_traj)
+    return ider.identify().flatten()
