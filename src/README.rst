@@ -1,33 +1,37 @@
-identify(solver, gain_initial_guess, acceleration_amplitude, reference_noise,
-         state_measurement_noise, torque_measurement_noise)
 
-solver: indirect with direct collocation, direct, indirect with shooting
+::
 
-initial_guess: shooting and directcollocation need initial guess for gains, in
-direct collocation initial guess for state trajectories will be from the
-measured values
+   identify(solver, gain_initial_guess, acceleration_amplitude,
+            reference_noise, state_measurement_noise, torque_measurement_noise)
 
-acceleration_amplitude: the standard deviation of the sum of sines
-
-reference_noise: error applied added to the reference (zero) which is like the
-error in the controller's ability to sense the correct state deviation
-
-state_measurement_noise: the standard deviation for each of measurement state
-values
-
-input_measurement_noise: the standard devation for each of the measured joint
-torques and acceleration
+``solver``
+   indirect with direct collocation, direct, indirect with shooting
+``initial_guess``
+   shooting and direct collocation need initial guess for gains, in direct
+   collocation initial guess for state trajectories will be from the measured
+   values
+``acceleration_amplitude``
+   the standard deviation of the sum of sines
+``reference_noise``
+   error applied added to the reference (zero) which is like the error in the
+   controller's ability to sense the correct state deviation
+``state_measurement_noise``
+   the standard deviation for each of measurement state values
+``input_measurement_noise``
+   the standard devation for each of the measured joint torques and
+   acceleration
 
 We need a simulator that generates two data sets: the identification data set
 and the validation data set. This will also be used in the shooting alg to
 simulate the system. This should be pretty fast for the shooting method to be
 reasonable.
 
-x, u = simulate(gains, acceleration_amp, reference_noise)
+::
 
-x are the state trajectories
+   x, u = simulate(gains, acceleration_amp, reference_noise)
 
-x_meas, u_meas = measurement_noise()
+- x are the state trajectories
+- x_meas, u_meas = measurement_noise()
 
 Figure 1
 --------
