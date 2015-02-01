@@ -62,7 +62,7 @@ def objective(gain_matrix, model, rhs, initial_conditions, time_vector,
     model_state_trajectory = odeint(rhs,
                                     initial_conditions,
                                     time_vector,
-                                    args=(rhs_args,))
+                                    args=rhs_args)
 
     s = sum_of_squares(measured_state_trajectory, model_state_trajectory)
 

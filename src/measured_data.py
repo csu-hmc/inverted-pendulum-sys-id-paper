@@ -84,15 +84,15 @@ class DataGenerator(object):
 
         self.actual['a'] = accel
 
-        print('Generating right hand side function.')
-        self.rhs, self.rhs_args = \
+        #print('Generating right hand side function.')
+        self.rhs, self.r, self.p = \
             self.model.closed_loop_ode_func(self.time, self.ref_noise, accel)
 
     def _generate_simulation_outputs(self):
 
-        print('Integrating equations of motion.')
+        #print('Integrating equations of motion.')
         # The initial conditions of the states are always zero.
-        x = odeint(self.rhs, np.zeros(4), self.time, args=(self.rhs_args,))
+        x = odeint(self.rhs, np.zeros(4), self.time, args=(self.r, self.p))
 
         # Back out the torques used in the control.
         # N x 4 = ((2 x 4) * (4 x N)).T

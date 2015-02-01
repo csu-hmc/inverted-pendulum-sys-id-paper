@@ -3,11 +3,12 @@
 from collections import OrderedDict
 
 import numpy as np
-from scipy.interpolate import interp1d
 import sympy as sy
 import sympy.physics.mechanics as me
 import yeadon
-from pydy.codegen.code import generate_ode_function
+from pydy.codegen.ode_function_generator import generate_ode_function
+
+from fast_interpolate import interpolate
 
 sym_kwargs = {'positive': True, 'real': True}
 me.dynamicsymbols._t = sy.symbols('t', **sym_kwargs)
@@ -543,9 +544,9 @@ class QuietStandingModel(object):
         rhs : function
             A function that evaluates the right hand side of the first order
             ODEs in a form easily used with scipy.integrate.odeint.
-        args : dictionary
-            A dictionary containing the model constant values and the
-            controller function.
+        r : function
+            The controller function.
+        p : list of constant values
 
         """
 
@@ -553,10 +554,6 @@ class QuietStandingModel(object):
 
         all_sigs = np.hstack((reference_noise,
                               np.expand_dims(platform_acceleration, 1)))
-        # NOTE : copy and assume_sorted do not seem to speed up the actual
-        # interpolation call. assume_sorted was introduced in SciPy 0.14.
-        interp_func = interp1d(time, all_sigs, axis=0, copy=False,
-                               assume_sorted=True)
 
         def controller(x, t):
             """
@@ -566,10 +563,11 @@ class QuietStandingModel(object):
             # TODO : This interpolation call is the most expensive thing
             # when running odeint. Seems like InterpolatedUnivariateSpline
             # may be faster, but it doesn't supprt an multidimensional y.
-            if t > time[-1]:
-                result = interp_func(time[-1])
-            else:
-                result = interp_func(t)
+            #if t > time[-1]:
+                #result = interp_func(time[-1])
+            #else:
+
+            result = interpolate(time, all_sigs, t)
 
             x_ref = result[:-1]
 
@@ -583,21 +581,16 @@ class QuietStandingModel(object):
             controls[1:] = np.dot(self.gain_scale_factors * K,
                                   x_ref - x)
 
-
             return controls
 
-        rhs = generate_ode_function(self.mass_matrix_full,
-                                    self.forcing_vector_full,
-                                    self.parameters.values(),
+        rhs = generate_ode_function(self.rhs,
                                     self.coordinates.values(),
                                     self.speeds.values(),
-                                    self.specifieds.values()[-3:],
+                                    self.parameters.values(),
+                                    specifieds=self.specifieds.values()[-3:],
                                     generator='cython')
 
-        args = {'constants': self.open_loop_par_map,
-                'specified': controller}
-
-        return rhs, args
+        return rhs, controller, self.open_loop_par_map
 
     def first_order_implicit(self):
         return sy.Matrix(self.kin_diff_eqs).col_join(self.fr_plus_frstar_closed)
