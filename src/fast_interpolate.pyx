@@ -18,24 +18,28 @@ def interpolate(np.ndarray[np.double_t, ndim=1, mode='c'] x,
 
     """
 
-    cdef int i = np.argmin(np.abs(x - x_new))
-    cdef int first, second
     cdef np.ndarray[np.double_t, ndim=1, mode='c'] m
     cdef np.ndarray[np.double_t, ndim=1, mode='c'] b
 
-    if i == 0:
-        return y[0]
-    elif i == y.shape[0] - 1:
-        return y[-1]
-    else:
-        if x[i] < x_new:
-            first = i
-            second = i + 1
+    cdef int n = len(x)
+    cdef int jl = 0
+    cdef int ju = n - 1
+
+    while (ju - jl) > 1:
+
+        jm = (ju + jl) / 2
+
+        if (x_new >= x[jm]):
+            jl = jm
         else:
-            first = i -1
-            second = i
+            ju = jm
 
-        m = (y[first] - y[second]) / (x[first] - x[second])
-        b = y[second] - m * x[second]
+    cdef int first, second
 
-        return m * x_new + b
+    first = jl
+    second = jl + 1
+
+    m = (y[first] - y[second]) / (x[first] - x[second])
+    b = y[second] - m * x[second]
+
+    return m * x_new + b
