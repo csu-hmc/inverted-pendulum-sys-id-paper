@@ -8,7 +8,7 @@ import sympy.physics.mechanics as me
 import yeadon
 from pydy.codegen.ode_function_generator import generate_ode_function
 
-from fast_interpolate import interpolate, Interpolator
+from fast_interpolate import Interpolator
 
 sym_kwargs = {'positive': True, 'real': True}
 me.dynamicsymbols._t = sy.symbols('t', **sym_kwargs)
@@ -556,13 +556,14 @@ class QuietStandingModel(object):
                               np.expand_dims(platform_acceleration, 1)))
 
         interpolator = Interpolator(time, all_sigs)
+        sig_result = np.zeros_like(all_sigs[0, :])
 
         def controller(x, t):
             """
             x = [theta_a, theta_h, omega_a, omega_h]
             r = [a, T_a, T_h]
             """
-            result = interpolator.interpolate(t)
+            result = interpolator.interpolate(t, sig_result)
 
             x_ref = result[:-1]
 
