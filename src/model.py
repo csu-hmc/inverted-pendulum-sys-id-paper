@@ -8,7 +8,7 @@ import sympy.physics.mechanics as me
 import yeadon
 from pydy.codegen.ode_function_generator import generate_ode_function
 
-from fast_interpolate import interpolate
+from fast_interpolate import interpolate, Interpolator
 
 sym_kwargs = {'positive': True, 'real': True}
 me.dynamicsymbols._t = sy.symbols('t', **sym_kwargs)
@@ -555,19 +555,14 @@ class QuietStandingModel(object):
         all_sigs = np.hstack((reference_noise,
                               np.expand_dims(platform_acceleration, 1)))
 
+        interpolator = Interpolator(time, all_sigs)
+
         def controller(x, t):
             """
             x = [theta_a, theta_h, omega_a, omega_h]
             r = [a, T_a, T_h]
             """
-            # TODO : This interpolation call is the most expensive thing
-            # when running odeint. Seems like InterpolatedUnivariateSpline
-            # may be faster, but it doesn't supprt an multidimensional y.
-            #if t > time[-1]:
-                #result = interp_func(time[-1])
-            #else:
-
-            result = interpolate(time, all_sigs, t)
+            result = interpolator.interpolate(t)
 
             x_ref = result[:-1]
 
