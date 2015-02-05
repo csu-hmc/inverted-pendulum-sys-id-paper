@@ -584,9 +584,11 @@ class QuietStandingModel(object):
                                     self.speeds.values(),
                                     self.parameters.values(),
                                     specifieds=self.specifieds.values()[-3:],
+                                    constants_arg_type='array',
+                                    specifieds_arg_type='function',
                                     generator='cython')
 
-        return rhs, controller, self.open_loop_par_map
+        return rhs, controller, np.array(self.open_loop_par_map.values())
 
     def first_order_implicit(self):
         return sy.Matrix(self.kin_diff_eqs).col_join(self.fr_plus_frstar_closed)
