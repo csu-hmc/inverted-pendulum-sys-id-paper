@@ -12,6 +12,8 @@
 
 """
 
+import multiprocessing as mp
+
 import numpy as np
 from scipy.integrate import odeint
 from scipy.optimize import minimize
@@ -79,11 +81,30 @@ def identify(time, measured_states, rhs, rhs_args, model, method='SLSQP'):
     initial_guess = model.scaled_gains.copy()
 
     if method == 'CMA':
-        gains = cma.fmin(objective,
-                         initial_guess.flatten(),
-                         0.125,  # sigma
-                         args=(model, rhs, x0, time, rhs_args,
-                               measured_states))
+        sigma = 0.125
+
+        # NOTE : The objective function needs to be importable from this
+        # module to work with multiprocessing. Making it a global allows it
+        # to inherit all the variables from inside the identify function and
+        # be importable. This shows a more elegant solution than making the
+        # function a global: http://stackoverflow.com/a/16071616/467314
+        global obj
+        def obj(gains):
+            return objective(gains, model, rhs, x0, time, rhs_args,
+                             measured_states)
+
+        # This method of parallelization is taken from the cma.py docstring
+        # for CMAEvolutionStrategy.
+        es = cma.CMAEvolutionStrategy(initial_guess.flatten(), sigma)
+
+        pool = mp.Pool(es.popsize)
+
+        while not es.stop():
+            gains = es.ask()
+            f_values = pool.map_async(obj, gains).get()
+            es.tell(gains, f_values)
+            es.disp()
+            es.logger.add()
     else:
         result = minimize(objective,
                           initial_guess,
