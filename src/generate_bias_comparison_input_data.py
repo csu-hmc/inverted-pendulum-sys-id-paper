@@ -7,6 +7,7 @@ import os
 
 import numpy as np
 from progressbar import ProgressBar
+from joblib import Parallel, delayed
 
 from model import QuietStandingModel
 from measured_data import DataGenerator
@@ -76,36 +77,49 @@ else:
     data.generate(platform_accel_noise_std, coordinate_noise_std,
                   speed_noise_std, torque_noise_std)
 
-    pbar = ProgressBar(maxval=len(ref_noise_stds) * len(platform_pos_mags))
+    pbar = ProgressBar(maxval=len(ref_noise_stds))
     pbar.start()
 
-    # TODO : Parallelize this! But, there could be a concurrency issue
-    # associated with the attributes on data. If multiprocessing pickles
-    # everything...maybe not.
+    def gen(platform_pos_mag):
+
+        # This is necessary so that each forked process gets the seed reset.
+        np.random.seed()
+
+        data.platform_pos_mag = platform_pos_mag
+
+        data._generate_model_inputs()
+        # Skip the rhs generation call but change out the variables
+        # needed in the controller function. This can only be done if
+        # the size of ref_noise and actual['a'] do not change in this
+        # loop. This saves us some time.
+        data.model.all_sigs[:, :] = np.hstack(
+            (data.ref_noise, np.expand_dims(data.actual['a'], 1)))
+        data._generate_simulation_outputs()
+        data._generate_measured_outputs()
+
+        x_n = data.actual['x_n']
+        a = data.measured['a']
+        x = data.measured['x']
+        u = data.measured['u']
+
+        return x_n, a, x, u
+
     for i, ref_noise_std in enumerate(ref_noise_stds):
-        for j, platform_pos_mag in enumerate(platform_pos_mags):
 
-            data.ref_noise_std = ref_noise_std
-            data.platform_pos_mag = platform_pos_mag
+        data.ref_noise_std = ref_noise_std
 
-            data._generate_model_inputs()
-            # Skip the rhs generation call but change out the variables
-            # needed in the controller function. This can only be done if
-            # the size of ref_noise and actual['a'] do not change in this
-            # loop. This saves us some time.
-            data.model.all_sigs[:, :] = np.hstack(
-                (data.ref_noise, np.expand_dims(data.actual['a'], 1)))
-            data._generate_simulation_outputs()
-            data._generate_measured_outputs()
+        res = Parallel(n_jobs=-1)(delayed(gen)(platform_pos_mag) for
+                                  platform_pos_mag in platform_pos_mags)
 
-            platform_acc_stds[i, j] = data.measured['a'].std()
+        for j, (x_n, a, x, u) in enumerate(res):
 
-            reference_noises[i, j, :, :] = data.actual['x_n']
-            measured_accel[i, j, :] = data.measured['a']
-            measured_states[i, j, :, :] = data.measured['x']
-            measured_joint_torques[i, j, :, :] = data.measured['u']
+            platform_acc_stds[i, j] = a.std()
+            reference_noises[i, j, :, :] = x_n
+            measured_accel[i, j, :] = a
+            measured_states[i, j, :, :] = x
+            measured_joint_torques[i, j, :, :] = u
 
-            pbar.update(2 * i + j)
+        pbar.update(i)
 
     pbar.finish()
 
