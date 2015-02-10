@@ -59,6 +59,9 @@ class DataGenerator(object):
         self.actual = {}
         self.measured = {}
 
+        self._generate_model_inputs()
+        self._generate_rhs_function()
+
     def _generate_model_inputs(self):
 
         self.interval = self.duration / (self.num_samples - 1)
@@ -75,18 +78,24 @@ class DataGenerator(object):
             self.ref_noise = normal(scale=self.ref_noise_std,
                                     size=(len(self.time), 4))
 
+        self.actual['x_n'] = self.ref_noise
+
         # Generate a random platform acceleration input.
         nums = [7, 11, 16, 25, 38, 61, 103, 131, 151, 181, 313, 523]
         freq = 2.0 * np.pi * np.array(nums, dtype=float) / 240.0
 
+        # NOTE : This function is not deterministic and give different
+        # results every call.
         pos, vel, accel = sum_of_sines(self.platform_pos_mag, freq,
                                        self.time)
 
         self.actual['a'] = accel
 
-        #print('Generating right hand side function.')
+    def _generate_rhs_function(self):
+
         self.rhs, self.r, self.p = \
-            self.model.closed_loop_ode_func(self.time, self.ref_noise, accel)
+            self.model.closed_loop_ode_func(self.time, self.ref_noise,
+                                            self.actual['a'])
 
     def _generate_simulation_outputs(self):
 
@@ -124,7 +133,7 @@ class DataGenerator(object):
             speed_noise = normal(scale=self.speed_noise_std,
                                  size=x[:, 2:].shape)
         x_noise = np.hstack((coord_noise, speed_noise))
-        x_meas = x + x_noise
+        self.measured['x'] = x + x_noise
 
         # Add measurement noise to the joint torques.
         u = self.actual['u']
@@ -132,8 +141,6 @@ class DataGenerator(object):
             u_meas = u
         else:
             u_meas = u + normal(scale=self.torque_noise_std, size=u.shape)
-
-        self.measured['x'] = x_meas
         self.measured['u'] = u_meas
 
     def generate(self, platform_accel_noise_std, coordinate_noise_std,
@@ -163,7 +170,6 @@ class DataGenerator(object):
         self.speed_noise_std = speed_noise_std
         self.torque_noise_std = torque_noise_std
 
-        self._generate_model_inputs()
         self._generate_simulation_outputs()
         self._generate_measured_outputs()
 
