@@ -552,11 +552,11 @@ class QuietStandingModel(object):
 
         controls = np.empty(3, dtype=float)
 
-        all_sigs = np.hstack((reference_noise,
-                              np.expand_dims(platform_acceleration, 1)))
+        self.all_sigs = np.hstack((reference_noise,
+                                   np.expand_dims(platform_acceleration, 1)))
 
-        interpolator = Interpolator(time, all_sigs)
-        sig_result = np.zeros_like(all_sigs[0, :])
+        interpolator = Interpolator(time, self.all_sigs)
+        sig_result = np.zeros_like(self.all_sigs[0, :])
 
         def controller(x, t):
             """
