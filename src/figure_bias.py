@@ -1,164 +1,254 @@
 #!/usr/bin/env python
 
 """This figure tries to show how one needs have a "ratio" of external
-perturbations to reference noise that is of some value > 1 to properly
-directly identify the controller."""
+perturbations to reference noise that is of some value > 1 (if perturbations
+are normalized) to properly directly identify the controller."""
 
 import os
 
 import numpy as np
+from scipy.ndimage.filters import uniform_filter
 from progressbar import ProgressBar
 from matplotlib import cm
 import matplotlib.pyplot as plt
 # this import is required for the projection='3d' to work
 from mpl_toolkits.mplot3d.axes3d import Axes3D
-from scipy.ndimage.filters import uniform_filter
 
-from model import QuietStandingModel
-from measured_data import DataGenerator
 import direct_identification
 import utils
 
-filename = os.path.join(utils.config_paths(), 'identified-gains.npz')
+KNOWN_GAINS = np.array([[950.0, 175.0, 185.0, 50.0],
+                        [45.0, 290.0, 60.0, 26.0]])
 
-if os.path.isfile(filename):
+file_names = {'input_data': 'bias_comparison_input_data.npz',
+              'direct_results': 'directly-identified-gains.npy',
+              'indirect_results': 'indirectly-indentified-gains.npz'}
+file_paths = {k: os.path.join(utils.config_paths(), v) for k, v in
+              file_names.items()}
 
-    with np.load(filename) as data:
-        ref_noise_stds = data['ref_noise_stds']
-        platform_pos_mags = data['platform_pos_mags']
-        platform_acc_stds = data['platform_acc_stds']
-        identified_gains = data['identified_gains']
+# TODO : This is a bad hack. Fix.
+from generate_bias_comparison_input_data import (ref_noise_stds,
+                                                 platform_pos_mags,
+                                                 platform_acc_stds,
+                                                 reference_noises,
+                                                 measured_accel,
+                                                 measured_states,
+                                                 measured_joint_torques)
 
-else:
 
-    num_nodes = 501
-    duration = 5.0
+def identify_gains_directly():
 
-    platform_accel_noise_std = 0.0
-    coordinate_noise_std = 0.0
-    speed_noise_std = 0.0
-    torque_noise_std = 0.0
+    if os.path.isfile(file_paths['direct_results']):
 
-    # Generate the symbolic dynamic model.
-    model = QuietStandingModel()
-    model.derive()
+        print('Loading precomputed directly identified gains.')
+        identified_gains = np.load(file_paths['direct_results'])
 
-    ref_noise_stds = np.linspace(0.0, 0.03, num=51)
-    platform_pos_mags = np.linspace(0.0, 0.3, num=51)
-    platform_acc_stds = np.empty((51, 51), dtype=float)
+    else:
+        print('Directly identifying gains.')
 
-    shape = (len(ref_noise_stds), len(platform_pos_mags), 8)
-    identified_gains = np.empty(shape, dtype=float)
+        n = len(ref_noise_stds)
+        m = len(platform_pos_mags)
 
-    pbar = ProgressBar(maxval=len(ref_noise_stds) * len(platform_pos_mags))
-    pbar.start()
+        shape = (n, m, KNOWN_GAINS.size)
+        identified_gains = np.empty(shape, dtype=float)
 
-    for i, ref_noise_std in enumerate(ref_noise_stds):
-        for j, platform_pos_mag in enumerate(platform_pos_mags):
+        pbar = ProgressBar(maxval=len(ref_noise_stds) * len(platform_pos_mags))
+        pbar.start()
 
-            #print('=' * 20)
-            #print('Iteration = {}'.format(2 * i + j))
-            #print('Generating simulated noisy data for:')
-            #print('Reference noise std = {}'.format(ref_noise_std))
-            #print('Platform position magnitude  = {}'.format(platform_pos_mag))
+        count = 0
 
-            data = DataGenerator(duration, num_nodes, ref_noise_std,
-                                platform_pos_mag, model=model)
-            data.generate(platform_accel_noise_std, coordinate_noise_std,
-                        speed_noise_std, torque_noise_std)
+        for i in range(n):
+            for j in range(m):
 
-            os.system('rm multibody_system*')
+                direct_gains = direct_identification.identify(
+                    measured_joint_torques[i, j],
+                    measured_states[i, j])
 
-            platform_acc_stds[i, j] = data.measured['a'].std()
+                identified_gains[i, j, :] = direct_gains
 
-            direct_gains = direct_identification.identify(data.measured['u'],
-                                                          data.measured['x'])
-            identified_gains[i, j, :] = direct_gains
+                pbar.update(count)
+                count += 1
 
-            pbar.update(2 * i + j)
+        pbar.finish()
 
-    pbar.finish()
+        np.save(file_paths['direct_results'], identified_gains)
 
-    np.savez(filename, identified_gains=identified_gains,
-                       ref_noise_stds=ref_noise_stds,
-                       platform_pos_mags=platform_pos_mags,
-                       platform_acc_stds=platform_acc_stds)
+    return identified_gains
 
-numerical_gains = np.array([[950.0, 175.0, 185.0, 50.0],
-                            [45.0, 290.0, 60.0, 26.0]]).flatten()
 
-mean_platform_acc_stds = platform_acc_stds.mean(axis=0)
+def relative_error(identified_gains):
+    """Returns an array that contains the absolute value of the relative
+    error of the identified gains with respect to the known gains.
 
-# Plot the results.
+    Parameters
+    ==========
+    identified_gains : ndarray, shape(n, m, 8)
 
-fig_2d, axes_2d = plt.subplots(2, 4)
-axes_2d = axes_2d.flatten()
+    Returns
+    =======
+    error : ndarray, shape(n, m, 8)
 
-fig_ratio, axes_ratio = plt.subplots(2, 4)
-axes_ratio = axes_ratio.flatten()
 
-###fig_3d, axes_3d = plt.subplots(2, 4, subplot_kw={'projection': '3d'})
-###axes_3d = axes_3d.flatten()
-###
-#### NOTE : Be careful with the 'indexing' option in meshgrid and make sure it
-#### matches Z. The transpose below on identified_gains makes this work out.
-###X, Y = np.meshgrid(ref_noise_stds, platform_acc_stds.mean(axis=0))
+    """
 
-# identified gains is [ref_idx, acc_idx, gain_idx]
-# identified gains.T is [gain_idx, acc_idx, ref_idx]
+    known_gains = KNOWN_GAINS.flatten()
 
-for i, Z in enumerate(identified_gains.T):
+    error = np.empty_like(identified_gains.T)
 
-    # relative_diff is [acc_idx, ref_idx]
+    # identified gains is [ref_idx, acc_idx, gain_idx]
+    # identified gains.T is [gain_idx, acc_idx, ref_idx]
 
-    relative_diff = np.abs((Z[1:, :] - numerical_gains[i]) / numerical_gains[i])
+    # for each gain
+    for k, gain in enumerate(identified_gains.T):
 
-    relative_diff = uniform_filter(relative_diff, size=5, mode='constant')
+        # gain is [acc_idx, ref_idx]
 
-    num_ids = len(mean_platform_acc_stds) * len(ref_noise_stds)
-    ratios = np.empty(num_ids)
-    values = np.empty(num_ids)
-    for j, acc_row in enumerate(relative_diff):
-        ratios[j:j + len(ref_noise_stds)] = mean_platform_acc_stds[j] / ref_noise_stds
-        values[j:j + len(ref_noise_stds)] = acc_row
+        error[k] = np.abs((gain - known_gains[k]) /
+                          known_gains[k])
 
-    axes_ratio[i].plot(ratios[~np.isnan(ratios)] / 1000.0, values[~np.isnan(ratios)], '.')
-    axes_ratio[i].set_ylim((0.0, np.max(values[ratios > 200.0])))
-    if i > 3:
-        axes_ratio[i].set_xlabel('ACC / REF Noise / 1000')
-    if i == 0 or i == 4:
-        axes_ratio[i].set_ylabel('Relative error')
+    return error.T
 
-    #print(np.max(relative_diff))
 
-    max_error = 0.5
+def plot_gain_error_vs_acc_and_ref_noise_2d(ref_noise_stds,
+                                            platform_acc_stds,
+                                            relative_error,
+                                            filter=False):
 
-    relative_diff[relative_diff > max_error] = np.nan
+    max_error = 1.0
 
-    # TODO : Ensure that each image is using the same color map range so
-    # that one colorbar can be used for all images.
-    image = axes_2d[i].imshow(relative_diff,
-                              cmap=cm.Reds,
-                              vmax=max_error,
-                              origin='lower')
-    axes_2d[i].set_title('Gain = {}'.format(numerical_gains[i]))
-    default_xticks = axes_2d[i].get_xticks()
-    x_labels = np.interp(default_xticks, np.arange(len(ref_noise_stds), dtype=float), ref_noise_stds)
-    axes_2d[i].set_xticklabels(['{:0.2f}'.format(r) for r in np.rad2deg(x_labels)])
-    if i > 3:
-        axes_2d[i].set_xlabel('Reference Noise STD [deg and deg/s]')
-    default_yticks = axes_2d[i].get_yticks()
-    y_labels = np.interp(default_yticks, np.arange(len(platform_acc_stds.mean(axis=0)), dtype=float), platform_acc_stds.mean(axis=0))
-    axes_2d[i].set_yticklabels(['{:0.2f}'.format(a) for a in y_labels])
-    if i == 0 or i == 4:
-        axes_2d[i].set_ylabel('Perturbation Acceleration STD [ms^-2]')
+    # copy the data so we don't booger it up
+    relative_error = relative_error.copy()
 
-    ###axes_3d[i].plot_surface(X[1:, :], Y[1:, :], relative_diff,
-                            ###cmap=cm.coolwarm, rstride=1, cstride=1,
-                            ###linewidth=0, antialiased=False)
+    known_gains = KNOWN_GAINS.flatten()
 
-fig_2d.subplots_adjust(right=0.8)
-cax = fig_2d.add_axes([0.85, 0.1, 0.075, 0.8])
-plt.colorbar(mappable=image, cax=cax)
+    fig, axes = plt.subplots(2, 4)
+    axes = axes.flatten()
 
-plt.show()
+    for k, gain_error in enumerate(relative_error.T):
+
+        if filter:
+            gain_error = uniform_filter(gain_error, size=5, mode='constant')
+
+        # Don't plot error above 100%.
+        gain_error[gain_error > max_error] = np.nan
+
+        # gain_error is indexed [j: acc_idx, i: ref_idx]
+        # imshow will put the acc on the y and ref on the x with the origin
+        # at the lower left
+        cmap = cm.Reds
+        # plot nans (masked values) with a green square
+        cmap.set_bad('g', 1.)
+        image = axes[k].imshow(np.ma.array(gain_error,
+                                           mask=np.isnan(gain_error)),
+                               cmap=cmap,
+                               vmax=max_error,
+                               interpolation='none',
+                               origin='lower')
+
+        axes[k].set_title('Gain = {}'.format(known_gains[k]))
+
+        default_xticks = axes[k].get_xticks()
+        x_labels = np.interp(default_xticks,
+                             np.arange(len(ref_noise_stds), dtype=float),
+                             ref_noise_stds)
+        axes[k].set_xticklabels(['{:0.2f}'.format(r) for r in
+                                np.rad2deg(x_labels)])
+
+        if k > 3:
+            axes[k].set_xlabel('Reference Noise STD [deg and deg/s]')
+
+        default_yticks = axes[k].get_yticks()
+        y_labels = np.interp(default_yticks,
+                             np.arange(len(platform_acc_stds.mean(axis=0)),
+                                       dtype=float),
+                             platform_acc_stds.mean(axis=0))
+        axes[k].set_yticklabels(['{:0.2f}'.format(a) for a in y_labels])
+
+        if k == 0 or k == 4:
+            axes[k].set_ylabel('Perturbation Acceleration STD [ms^-2]')
+
+    fig.subplots_adjust(right=0.9)
+    # [Left Bottom Width Height]
+    cax = fig.add_axes([0.95, 0.1, 0.025, 0.8])
+    plt.colorbar(mappable=image, cax=cax)
+
+    return fig, axes
+
+
+def plot_gain_error_vs_acc_ref_noise_ratio(ref_noise_stds,
+                                           platform_acc_stds,
+                                           relative_error, filter=False):
+    """Returns a figure and its axes.
+
+    Parameters
+    ==========
+    ref_noise_stds : ndarray, shape(n,)
+    platform_acc_stds : ndarray, shape(n, m)
+    relative_error : ndarray, shape(n, m, p)
+
+    """
+
+    known_gains = KNOWN_GAINS.flatten()
+
+    # one subplot per gain
+    fig, axes = plt.subplots(2, 4)
+    axes = axes.flatten()
+
+    # platform_acc_stds is indexed [i: ref_idx, j: acc_idx]
+    n, m = platform_acc_stds.shape
+    # this creates an n, m array such that the ref noise vector is repeated
+    # in reverse along m columns
+    rep = np.repeat(ref_noise_stds[::-1].reshape(n, 1), m, axis=1)
+    assert rep.shape == (n, m)
+    rep[rep < 1e-10] = np.nan  # avoid divide by zeros
+    # ratios is indexed [j: acc_idx, i: ref_idx]
+    ratios = np.transpose(platform_acc_stds / rep)
+
+    # relative_error.T is [k: gain_err_idx, j: acc_idx, i: ref_idx]
+    for k, gain_error in enumerate(relative_error.T):
+
+        if filter:
+            gain_error = uniform_filter(gain_error, size=5, mode='constant')
+
+        # gain_error is indexed [j: acc_idx, i: ref_idx]
+
+        assert ratios.shape == gain_error.shape
+
+        axes[k].set_title('Gain = {}'.format(known_gains[k]))
+
+        axes[k].plot(ratios.flatten() / 1000.0,
+                     gain_error.flatten(), '.')
+
+        axes[k].set_ylim((0.0, 1.0))
+
+        if k > 3:
+            axes[k].set_xlabel('ACC / REF / 1000')
+
+        if k == 0 or k == 4:
+            axes[k].set_ylabel('Relative error')
+
+    return fig, axes
+
+
+def plot_gain_error_vs_acc_ref_noise_3d(ref_noise_stds,
+                                        platform_acc_stds,
+                                        relative_error):
+
+    fig, axes = plt.subplots(2, 4, subplot_kw={'projection': '3d'})
+    axes = axes.flatten()
+
+    # NOTE : Be careful with the 'indexing' option in meshgrid and make sure it
+    # matches Z. The transpose below on identified_gains makes this work out.
+    X, Y = np.meshgrid(ref_noise_stds, platform_acc_stds.mean(axis=0))
+
+    # identified gains is [ref_idx, acc_idx, gain_idx]
+    # identified gains.T is [gain_idx, acc_idx, ref_idx]
+
+    for i, Z in enumerate(identified_gains.T):
+
+        # Skip the first index because it is always super high.
+        axes[i].plot_surface(X[1:, :], Y[1:, :], relative_error,
+                             cmap=cm.coolwarm, rstride=1, cstride=1,
+                             linewidth=0, antialiased=False)
+
+    return fig, axes
