@@ -20,6 +20,8 @@ file_path = os.path.join(utils.config_paths(), file_name)
 
 if os.path.isfile(file_path):
 
+    print('Loading precomputed input data.')
+
     with np.load(file_path) as data:
         ref_noise_stds = data['ref_noise_stds']
         platform_pos_mags = data['platform_pos_mags']
@@ -30,6 +32,8 @@ if os.path.isfile(file_path):
         measured_joint_torques = data['measured_joint_torques']
 
 else:
+
+    print('Computing input data, may take a while...')
 
     # TODO : The following should probably be arguments to a function and/or
     # command line.
@@ -91,7 +95,7 @@ else:
         # Skip the rhs generation call but change out the variables
         # needed in the controller function. This can only be done if
         # the size of ref_noise and actual['a'] do not change in this
-        # loop. This saves us some time.
+        # loop. This saves computation time.
         data.model.all_sigs[:, :] = np.hstack(
             (data.ref_noise, np.expand_dims(data.actual['a'], 1)))
         data._generate_simulation_outputs()
