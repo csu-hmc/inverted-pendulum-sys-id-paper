@@ -42,6 +42,13 @@ class ControllerIdentifier(object):
 
         """
 
+        # Ax = b
+        # A : N, n
+        # b : N, m
+        # (N x n) (n x m) = (N x m)
+        # (N x n) (n x 1) = (N x 1) you can do them one at a time
+        # so at least n time steps are required
+
         res = lstsq(-self.state_traj, self.input_traj,
                     overwrite_a=self.copy, overwrite_b=self.copy,
                     check_finite=self.check_finite)
