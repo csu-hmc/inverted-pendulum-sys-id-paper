@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
 import numpy as np
+from logbook import Logger
 from opty.direct_collocation import Problem
+
+log = Logger('Log')
 
 
 def nlp_obj(num_nodes, interval, measured_states):
@@ -61,6 +64,58 @@ def nlp_obj_grad(num_nodes, interval, measured_states):
     return obj_grad
 
 
+def setup_problem(num_nodes, time_interval, measured_states,
+                  measured_platform_accel, model):
+    """Returns the optimal gains using indirect identification via direct
+    collocation.
+
+    Parameters
+    ==========
+    num_nodes : integer
+        The number of collocation nodes.
+    time_interval : float
+        The time in seconds between the nodes.
+    measured_states : ndarray, shape(num_nodes, 4)
+        The measured state trajectories.
+    measured_platform_accel : ndarray, shape(num_nodes,)
+        The measured platform acceleration.
+    model : instance of QuietStandingModel
+        This should be a model which has already be derived.
+
+    Returns
+    =======
+    prob : opty.direct_collocation.Problem
+
+    """
+
+    log.info('Setting up direct collocation optimization problem.')
+
+    x_meas_vec = measured_states.T.flatten()
+
+    obj = nlp_obj(num_nodes, time_interval, x_meas_vec)
+    obj_grad = nlp_obj_grad(num_nodes, time_interval, x_meas_vec)
+
+    bounds = {}
+    for g in model.gain_symbols:
+        bounds[g] = (0.0, 1.0)
+
+    prob = Problem(obj,
+                   obj_grad,
+                   model.first_order_implicit(),
+                   model.states(),
+                   num_nodes,
+                   time_interval,
+                   known_parameter_map=model.closed_loop_par_map,
+                   known_trajectory_map={
+                       model.specifieds['platform_acceleration']:
+                       measured_platform_accel},
+                   bounds=bounds,
+                   time_symbol=model.time,
+                   integration_method='midpoint')
+
+    return prob
+
+
 def identify(num_nodes, time_interval, measured_states,
              measured_platform_accel, model):
     """Returns the optimal gains using indirect identification via direct
@@ -86,29 +141,8 @@ def identify(num_nodes, time_interval, measured_states,
 
     """
 
-    print('Setting up direct collocation optimization problem.')
-    x_meas_vec = measured_states.T.flatten()
-
-    obj = nlp_obj(num_nodes, time_interval, x_meas_vec)
-    obj_grad = nlp_obj_grad(num_nodes, time_interval, x_meas_vec)
-
-    bounds = {}
-    for g in model.gain_symbols:
-        bounds[g] = (0.0, 1.0)
-
-    prob = Problem(obj,
-                   obj_grad,
-                   model.first_order_implicit(),
-                   model.states(),
-                   num_nodes,
-                   time_interval,
-                   known_parameter_map=model.closed_loop_par_map,
-                   known_trajectory_map={
-                       model.specifieds['platform_acceleration']:
-                       measured_platform_accel},
-                   bounds=bounds,
-                   time_symbol=model.time,
-                   integration_method='midpoint')
+    prob = setup_problem(num_nodes, time_interval, measured_states,
+                         measured_platform_accel, model)
 
     initial_guess = np.zeros(prob.num_free)
 

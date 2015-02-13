@@ -23,6 +23,7 @@ if os.path.isfile(file_path):
     print('Loading precomputed input data.')
 
     with np.load(file_path) as data:
+        # time = data['time']
         ref_noise_stds = data['ref_noise_stds']
         platform_pos_mags = data['platform_pos_mags']
         platform_acc_stds = data['platform_acc_stds']
@@ -128,6 +129,7 @@ else:
     pbar.finish()
 
     np.savez(file_path,
+             time=data.time,
              ref_noise_stds=ref_noise_stds,
              platform_pos_mags=platform_pos_mags,
              platform_acc_stds=platform_acc_stds,

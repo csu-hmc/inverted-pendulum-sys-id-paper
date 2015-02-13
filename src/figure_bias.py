@@ -13,7 +13,10 @@ from matplotlib import cm
 import matplotlib.pyplot as plt
 # this import is required for the projection='3d' to work
 from mpl_toolkits.mplot3d.axes3d import Axes3D
+import logbook
 
+from model import QuietStandingModel
+import indirect_collocation
 import direct_identification
 import utils
 
@@ -22,7 +25,9 @@ KNOWN_GAINS = np.array([[950.0, 175.0, 185.0, 50.0],
 
 file_names = {'input_data': 'bias_comparison_input_data.npz',
               'direct_results': 'directly-identified-gains.npy',
-              'indirect_results': 'indirectly-indentified-gains.npz'}
+              'indirect_results': 'indirectly-indentified-gains.npz',
+              'indirect_times': 'indirect-times.npz',
+              'indirect_status': 'indirect-status.npz'}
 file_paths = {k: os.path.join(utils.config_paths(), v) for k, v in
               file_names.items()}
 
@@ -34,6 +39,105 @@ from generate_bias_comparison_input_data import (ref_noise_stds,
                                                  measured_accel,
                                                  measured_states,
                                                  measured_joint_torques)
+
+
+def identify_gains_indirectly():
+    # create a Problem for each of the platform eaccelerations because that
+    # is although it seems like you may be able to change out the
+    # known_trajectory_map dynamically in the constrain collocator.  the obj
+    # and obj_grad is easily subbed out
+
+    if os.path.isfile(file_paths['indirect_results']):
+
+        logbook.info('Loading precomputed indirectly identified gains.')
+        identified_gains = np.load(file_paths['indirect_results'])
+
+    else:
+        logbook.info('Indirectly identifying gains.')
+
+        n = len(ref_noise_stds)
+        m = len(platform_pos_mags)
+
+        shape = (n, m, KNOWN_GAINS.size)
+        identified_gains = np.empty(shape, dtype=float)
+
+        status_nums = np.empty((n, m), dtype=int)
+        times = np.empty((n, m), dtype=float)
+
+        model = QuietStandingModel(scaled_gains=0.5)
+        model.derive()
+
+        num_nodes = measured_states[0, 0].shape[0]
+        duration = 5.0  # TODO : This should be in the generated data.
+        time_interval = duration / (num_nodes - 1)
+
+        # set the problem up with some dummy inputs
+        prob = indirect_collocation.setup_problem(num_nodes, time_interval,
+                                                  measured_states[0, 0].T.flatten(),
+                                                  measured_accel[0, 0],
+                                                  model)
+
+        prob.addOption('print_level', 0)
+        prob.addOption('sb', "yes")  # suppress IPOPT banner
+        prob.addOption('linear_solver', 'ma57')
+        prob.addOption('max_iter', 300)
+        # 3 seconds will take 8 hrs for 10200 trials
+        # 5 seconds will take 14 hrs
+        prob.addOption('max_cpu_time', 6.0)
+
+        acc_sym = model.specifieds['platform_acceleration']
+        initial_guess = np.zeros(prob.num_free)
+        # Give it the known gains as a guess, because all we care about is
+        # how the optimal solution is affected by the accel and noise.
+        initial_guess[-8:] = model.numerical_gains.flatten()
+
+        f = open('status.csv', 'w')
+        f.write('i,j,status,status_msg\n')
+
+        logbook.info('Staring loop.')
+
+        pbar = ProgressBar(maxval=n * m)
+        pbar.start()
+
+        count = 0
+        for i in range(n):
+            for j in range(m):
+
+                x_meas_vec = measured_states[i, j].T.flatten()
+                initial_guess[:-8] = x_meas_vec
+                prob.obj = indirect_collocation.nlp_obj(
+                    num_nodes, time_interval, x_meas_vec)
+                prob.obj_grad = indirect_collocation.nlp_obj_grad(
+                    num_nodes, time_interval, x_meas_vec)
+                prob.collocator.known_trajectory_map[acc_sym] = measured_accel[i, j]
+                # TODO : Time this call.
+                @utils.timeit
+                def solve():
+                    solution, info = prob.solve(initial_guess)
+                    return solution, info
+                solution, info, time = solve()
+                times[i, j] = time
+                status_nums[i, j] = int(info['status'])
+                line = '{},{},{},{}\n'.format(i, j, info['status'], info['status_msg'])
+                f.write(line)
+                # TODO : Capture if it doesn't find a solution.
+                identified_gains[i, j, :] = \
+                    model.gain_scale_factors.flatten() * solution[-8:]
+
+                pbar.update(count)
+                count += 1
+
+        logbook.info('Loop done.')
+
+        f.close()
+
+        pbar.finish()
+
+        np.save(file_paths['indirect_results'], identified_gains)
+        np.save(file_paths['indirect_status'], status_nums)
+        np.save(file_paths['indirect_times'], times)
+
+    return identified_gains
 
 
 def identify_gains_directly():
