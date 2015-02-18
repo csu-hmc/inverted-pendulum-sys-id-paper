@@ -19,6 +19,10 @@ from scipy.integrate import odeint
 from scipy.optimize import minimize
 import cma
 
+# TODO : Make sure that we are simulating with the MEASURED platform
+# acceleration. The identification simluations should be using the measured
+# values not the actual values.
+
 
 def sum_of_squares(measured_states, simulated_states, interval=1.0):
     """Returns the sum of the squares of the difference in the measured
@@ -73,12 +77,38 @@ def objective(gain_matrix, model, rhs, initial_conditions, time_vector,
     return s
 
 
-def identify(time, measured_states, rhs, rhs_args, model, method='SLSQP'):
+def identify(time, measured_states, rhs, rhs_args, model, method='SLSQP',
+             initial_guess=None, tol=1e-8):
+    """
+    Parameters
+    ==========
+    time : ndarray, shape(n,)
+        The monotonically increasing time vector.
+    measured_states : ndarray, shape(n, 4)
+        The measured state variables.
+    rhs : function
+        A function, f(x, t, r, p), that evaluates the right hand side of the
+        ordinary differential equations describing the closed loop system.
+    rhs_args : tuple
+        The specified input and the constants.
+    model : QuietStandingModel
+    method : string, optional
+        Any method available in scipy.optimize.minimize or 'CMA'.
+    initial_guess : ndarray, shape(8,), optional
+        The initial guess for the gains.
+
+    Returns
+    =======
+    gains : ndarray, shape(8,)
+        The flattend gain matrix.
+
+    """
 
     x0 = np.zeros(4)
 
-    #initial_guess = np.zeros_like(model.scaled_gains.copy())
-    initial_guess = model.scaled_gains.copy()
+    if initial_guess is None:
+        initial_guess = np.zeros_like(model.scaled_gains.copy())
+        #initial_guess = model.scaled_gains.copy()
 
     if method == 'CMA':
         sigma = 0.125
@@ -95,11 +125,13 @@ def identify(time, measured_states, rhs, rhs_args, model, method='SLSQP'):
 
         # This method of parallelization is taken from the cma.py docstring
         # for CMAEvolutionStrategy.
-        es = cma.CMAEvolutionStrategy(initial_guess.flatten(), sigma)
+        es = cma.CMAEvolutionStrategy(initial_guess.flatten(), sigma,
+                                      {'tolx': tol})
 
         pool = mp.Pool(es.popsize)
 
         while not es.stop():
+            # TODO : This gains is a group of gains for each iteration.
             gains = es.ask()
             f_values = pool.map_async(obj, gains).get()
             es.tell(gains, f_values)
@@ -111,6 +143,7 @@ def identify(time, measured_states, rhs, rhs_args, model, method='SLSQP'):
                           method=method,
                           args=(model, rhs, x0, time, rhs_args,
                                 measured_states),
+                          tol=tol,
                           options={'disp': True})
         gains = result.x.flatten()
 

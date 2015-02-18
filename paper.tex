@@ -1,10 +1,20 @@
 \documentclass{article}
 
+% for images: png, pdf, etc
 \usepackage{graphicx}
-\usepackage{booktabs} % for table /toprule, /midrule, etc
+
+% for nice table formatting, i.e. /toprule, /midrule, etc
+\usepackage{booktabs}
+
+% for nice units
+\usepackage{siunitx}
+
 \usepackage{amsmath}
 
-\title{Controller parameter identification using direct collocation}
+\title{Quiet Standing Controller Parameter Identification: A Comparison of
+Methods}
+
+\author{Jason K. Moore and Antonie van den Bogert}
 
 \begin{document}
 
@@ -12,117 +22,183 @@
 
 \section{Introduction}
 
-Given a mathematical model of a system operating inside a closed loop system
-and experimental measurements of data collected from that system, it is common
-to attempt to identify parameters of the mathematical model that cause the
-models response to the measured inputs to best fit the measured output data.
-For linear systems, there are a variety of solutions to these identification
-problems, but for non linear systems the solution amounts to solving a
-optimization problem which is most certinaly laden with many local optima.
+It is hypothesized that a human operating during the quiet standing task uses
+feedback to remain upright in the face of perturbations. For various reasons,
+it is desirable to obtain mathematical models that predict a human's actuation
+patterns given measured estimates of the sensory information available to the
+human.  Reasonably good models of the human's open loop musculoskeletal system
+exist but models of the human's control system and the system process noises
+are still less than adequate. The control model can possibly be derived from
+first principles, but high level understanding of the human's sensory
+neurological feedback patterns are difficult to derive from the low level
+neurological first principles. These high level control descriptions may be
+more easily arrived at through identification and learning techniques.
 
-We are particularly interested in identifying the parameters of the controller
-in a closed loop system. It is theorized that creatures operate, at least
-partially, under a closed loop during locomotion. Humans for example have
-proprioceptive, vestibular, etc sensors that provide a rich set of internal
-measurements that guide our choice for muscle activation. If the map from
-sensastion to acuatation can be identified, then the engineer will have a
-mathematical model of the highly evolved control system human's employ that can
-be used for biomicry in robotic controls. This is potentially useful for
-humanoid robots and assitive devices for both able body and disabled
-locomoters.
+Here we present a numerical study comparing three methods of identifying the
+parameters of a human quiet standing state feedback system. The first method,
+direct identification, is by far the least computationally intensive but
+suffers from bias due to the unknown processes in the modeled
+system~\cite{Kooij2010}. The second method, single shooting, is a typical
+method for parameter identification but is the most computationally intensive
+and often suffers from extreme sensitivity to initial guesses. Finally, the
+third method, which has not been used for control parameter identification in
+biological systems, is direct collocation. We aim to show that direct
+collocation is better suited to control parameter identification because it
+does not suffer from bias, computation times are very reasonable, and it is
+much less sensitive to initial guesses than shooting.
 
-In this paper, we present the use of direct collocation to identify the
-controller parameters of controled inverted pendulum that is excited by
-pseudo-random external inputs. The method is compared to more traditional
-shooting optimization methods and also a direct identification method.
+\section{Musculoskeletal Model Description}
 
-Direct collocation is more commonly used to find the open loop controls that
-drive a mathematical model to track a particular trajectory.
+We make use of the widely used planar two link inverted pendulum model of human
+quiet standing. In particular, our model matches that described in
+\cite{Park2004}. Figure~\ref{fig:free-body-diagram} shows the open loop system.
+The human is modeled by two rigid bodies: the legs and the torso. These are
+connected to each other at the hip joint, modeled as an ideal pin. The legs can
+rotate about a pin joint relative to the ``platform'' and the platform/ankle
+point can be laterally accelerated. The centers of mass of the legs and torso
+are located line connecting the respective pin joints. The muscles are modeled
+as simple joint torque actuators. The orientation of the bodies are described
+by the generalized coordinates $\theta_a$ and $\theta_h$. Gravity acts on the
+bodies in the $-y$ direction. The equations of motion were formed symbolically
+using Kane's Method \cite{Kane1985} using SymPy~\cite{Gede2013}. The model
+derivation is included in the \verb|src/model.py| file and implemented in a
+class named \verb|QuietStandingModel|.
 
-\section{Closed Loop System Model Description}
+The numerical values of the model constants were estimated using Yeadon's
+method and the software package \verb|yeadon|~\cite{Dembia2014}. The
+measurements are included in \verb|raw-data/yeadon-measurements.yml|.
+Table~\ref{tab:model-constants} reports the computed constants for the model.
 
-Herein we make use of a well known and studied planar inverted pendulum on a
-cart as a our plant model, except that we allow any number of links. The cart
-with mass, $m_o$ can move laterally but is restricted to the origin by a linear
-spring and damper. The links are masseless and there is a point mass located at
-each link joint. The external loads acting on the system are a lateral force
-which acts on the cart and ``joint torques'' at each joint which apply an equal
-and opposite torque between the adjacent joints.
-
-% TODO : m_{n+1} and q_{n+1} should be m_n and q_n in the figure. And l_n
-% should be l_{n-1} if n is the number of links.
+% TODO : This is too long!
+\begin{equation}
+  \input{eoms.tex}
+\end{equation}
 
 \begin{figure}
   \centering
-  \includegraphics{figures/n-pendulum-with-cart.pdf}
-  \caption{Free body diagram of the n-link pendulum on a cart used in this
-    study.}
+  \includegraphics{figures/free-body-diagram.pdf}
+  \caption{Free body diagram of musculoskeletal model used in this study.}
   \label{fig:free-body-diagram}
 \end{figure}
 
 \begin{table}
   \centering
   \caption{Constant parameters in the plant}
-  \begin{tabular}{llll}
-    \toprule
-    Variable   & Description                          & Value            & Units \\
-    \midrule
-    $n$        & number of links                      & 1-4              & NA    \\
-    $m$        & mass                                 & $75.0 / (n + 1)$ & kg    \\
-    $l$        & length of each link                  & $1.75 / n$       & m     \\
-    $c$        & lateral spring damping coefficient   &                  & Ns/m  \\
-    $k$        & lateral spring stiffness coefficient &                  & N/m   \\
-    \bottomrule
-  \end{tabular}
+  \input{tables/constants-table.tex}
+  \label{tab:model-constants}
 \end{table}
 
-To close the loop, we assume full state feedback and make use of an infinite
-horizon continous time linear quadratic regulator to compute the optimal
-feedback gains to stabilize the linearized form of the equations about the
-nominal operating point, $q,u=0$. Since we are not concerned with performance,
-we simply set the $Q$ and $R$ matrices to the appropriate sized identify
-matrix.
+\section{Control Model Description}
 
-% TODO : Maybe include a table of gains for the the 1, 2, 3 and 4 link
-% pendulums in the Appendix.
-
-For example the open loop equations of motion for the 1 link pendulum take the
-following form:
+To close the loop, we assume the human's sensors allow for full state feedback.
+There is physicoolgical backing for this assumption but we mostly choose it for
+computational simplicity. Given the state vector:
 
 \begin{equation}
-   \begin{bmatrix}
-     0 \\ 0 \\ 0 \\ 0
-   \end{bmatrix}
-   =
-   \begin{bmatrix}
-     \dot{q}_{0} - u_{0} \\
-     \dot{q}_{1} - u_{1} \\ c u_{0} + k q_{0} + l_{0} m_{1} u^{2}_{1}
-     \operatorname{sin}\left(q_{1}\right) - l_{0} m_{1}
-     \operatorname{cos}\left(q_{1}\right) \dot{u}_{1} + \left(m_{0} +
-     m_{1}\right) \dot{u}_{0} - F \\
-     -g l_{0} m_{1} \operatorname{sin}\left(q_{1}\right) + l_{0}^{2} m_{1} \dot{u}_{1} - l_{0} m_{1} \operatorname{cos}\left(q_{1}\right) \dot{u}_{0} - T_{1}
-   \end{bmatrix}
+  x = \left[\theta_a \theta_h \omega_a \omega_h \right]^T
 \end{equation}
 
-% TODO : Show a block diagram of the system
+we can close the loop with
 
-The loop is closed by replacing the joint torque with
+\begin{equation}
+  T = K * (x_ref - x)
+\end{equation}
+
+Therefore we create a gain matrix:
+
+\begin{equation}
+  \begin{bmatrix}
+    k_{00} & k_{01} & k_{02} & k_{03} \\
+    k_{10} & k_{11} & k_{12} & k_{13} \\
+  \end{bmatrix}
+\end{equation}
+
+The acceleration $a$ is treated as an exogenous input.
+
+We consider a process noise, in our case we add noise to the reference. This
+primarily represents the controller's error in estimatign the state error, but
+can also
+
+\section{Data Measurement}
+
+Several variables are useful as measurements, $y_m$, for identification
+purposes. To obtain the state trajectory under the two exongenous inputs $a$
+and $x_n$, we simulate the system by integrating the first order form of the
+equations of motion forward in time. We use the variable step integration
+routine available in odepack's lsoda routine and acces it through SciPy's
+integration wrappers. The measurements, $y$ are
+
+\begin{equation}
+  y_m(t) = [a(t), x(t), T(x)] + v(t)
+\end{equation}
+
+where v(t) is a random process vector with a mean of zero and standard
+deviation.
+
+\section{Direct Identification}
+
+The direct approach can be used to identify the gains in the controller. The
+accuracy of this approach relies heavily on the ratio of the system's process
+noise and the applied pertrubations \cite{Kooij2005}. To implement the inputs
+to the controller (-x) and the outputs of the controller (T) are assumed to be
+measured. A linear identifcation model is constructed and linear least squares
+can be used to compute the optimal gains for a set of measurments.
+
+For the identification we assume that the controller model is:
+
+\begin{equation}
+  u = -K * x
+\end{equation}
+
+i.e. not affected by reference noise or deviating reference
+
+Measuered states and joint torques
+$\mathbf{X}$ : N x n
+$\mathbf{T}$ : N x m
+
+Unknown gains
+$\tilde{\mathbf{K}}$: n x m
+
+\begin{equation}
+  -x \tilde{K} = \mathbf{T}
+\end{equation}
+
+The least squares estimation
+
+\section{Indirect Identification: Shooting}
+
+Indirect identification is based on minimizing the following cost function:
 
 \begin{align}
-   u^{con} = \mathbf{K} (x_{eq} - x) \\
-   u^{con} = T_{1} = -k_{00} q_0 - k_{01} q_1 - k_{02} u_0 - k_{03} u_1
+  J(p) = \int_{t_0}^{t_f} [x_m(t) - x(t, p)]^2 dt
 \end{align}
 
-We excite the system at $F$ with a sum of sines to create a pseudo-random
-input. And add two types of noise to the system: process $w$ and measurement
-$y$.
+the state at any time is determined by integrating the eqations of motion
 
-\begin{align}
-  \dot{x} = f(x, u) + w(t) \\
-  y = x + v(t)
-\end{align}
+\begin{equation}
+  x = \int_{t_0}^{t_f} f(x, t, r_m, p_m, p) dt
+\end{equation}
 
-\section{Direct Collocation}
+$r_m$ : measured exongenous input
+$p_m$ : measured constant parameters
+p : unknown constant parameters
+
+given the initial state $x_0$ \footnote{Here we assume that the initial state is
+zero and do not include it in the objective's unknowns}.
+
+To test shooting we make use both a gradient based sovler and a gradient free
+evolutionary algorithm.
+
+The quasi-Newton method of Broyden, Fletcher, Goldfarb, and Shanno is a common
+general purpose minimizer for unconstrained problems. And we use the CMAES
+algorithm which is has been successfully used for control identification
+purposes \cite{Wang2010}.
+
+\begin{equation}
+  J(\tilde{K}) = h \sum_1^N (\bar{x}_i - x_i)^2
+\end{equation}
+
+\section{Indirect Identification: Direct Collocation}
 
 We make use of direct collocation to transform the parameter identifaction
 problem into a large scale non-linear programming problem. Do do so we first
@@ -158,6 +234,9 @@ The NLP problem can be formed
 \end{align}
 
 The goal is to estimate the uknown parameters $p$, the controller gains in our
-case, given noisy measurements, $y_m_i$.
+case, given noisy measurements, $y_{m_i}$.
+
+\bibliographystyle{unsrt}
+\bibliography{references}
 
 \end{document}

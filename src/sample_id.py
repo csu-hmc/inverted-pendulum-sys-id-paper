@@ -46,7 +46,7 @@ indirect_dc_gains = indirect_collocation.identify(num_nodes, data.interval,
 print('Indirect Identification via Shooting.')
 indirect_sh_gains = indirect_shooting.identify(data.time,
                                                data.measured['x'], data.rhs,
-                                               (data.r, data.p), h)
+                                               (data.r, data.p), h, method="CMA")
 
 print_gains(h.numerical_gains.flatten(),
             direct_gains,

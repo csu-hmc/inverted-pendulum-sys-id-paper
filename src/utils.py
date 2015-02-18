@@ -23,7 +23,7 @@ def timeit(method):
         #print '%r (%r, %r) %2.2f sec' % \
               #(method.__name__, args, kw, t_delta)
 
-        return result + (t_delta,)
+        return (result, ) + (t_delta,)
 
     return timed
 
@@ -41,13 +41,13 @@ def print_gains(actual, *identified):
 
 
 def config_paths():
-    """Returns the full path to the directories specified in the config.yml
+    """Returns the full paths to the directories specified in the config.yml
     file.
 
     Returns
     -------
-    processed_dir : string
-        Absolute path to the processed data directory.
+    paths : dictionary
+        Absolute paths to the various directories.
 
     """
 
@@ -62,10 +62,13 @@ def config_paths():
         with open(os.path.join(root_dir, 'default-config.yml'), 'r') as f:
             config = yaml.load(f)
 
-    processed_dir_name = os.path.join(root_dir, config['processed_data_dir'])
-    processed_dir = os.path.join(root_dir, processed_dir_name)
+    paths = {}
+    for name, dir_name in config.items():
+        dir_path = os.path.join(root_dir, dir_name)
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        paths[name] = dir_path
 
-    if not os.path.exists(processed_dir):
-        os.makedirs(processed_dir)
+    paths['project_root'] = root_dir
 
-    return processed_dir
+    return paths
