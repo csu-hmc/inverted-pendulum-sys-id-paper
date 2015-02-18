@@ -12,8 +12,8 @@ the results in the paper.
 The latest rendered version of the PDF can be viewed via the ShareLaTeX_ CI
 system:
 
-.. image:: https://www.sharelatex.com/github/repos/csu-hmc/inverted-pendulum-sys-id/builds/latest/badge.svg
-   :target: https://www.sharelatex.com/github/repos/csu-hmc/inverted-pendulum-sys-id/builds/latest/output.pdf
+.. image:: https://www.sharelatex.com/github/repos/csu-hmc/inverted-pendulum-sys-id-paper/builds/latest/badge.svg
+   :target: https://www.sharelatex.com/github/repos/csu-hmc/inverted-pendulum-sys-id-paper/builds/latest/output.pdf
 
 .. _ShareLaTeX: http://sharelatex.com
 
