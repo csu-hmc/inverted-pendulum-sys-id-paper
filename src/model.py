@@ -9,6 +9,9 @@ import yeadon
 from pydy.codegen.ode_function_generator import generate_ode_function
 
 from fast_interpolate import Interpolator
+import utils
+
+PATHS = utils.config_paths()
 
 sym_kwargs = {'positive': True, 'real': True}
 me.dynamicsymbols._t = sy.symbols('t', **sym_kwargs)
@@ -434,7 +437,8 @@ class QuietStandingModel(object):
 
     def _numerical_parameters(self):
 
-        h = yeadon.Human('JasonYeadonMeas.txt')
+        h = yeadon.Human(os.path.join(PATHS['raw_data_dir'],
+                                      'JasonYeadonMeas.txt'))
 
         hip_pos = h.J1.pos
         ankle_pos = h.J2.solids[1].pos
