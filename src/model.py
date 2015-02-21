@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 from collections import OrderedDict
 
 import numpy as np
