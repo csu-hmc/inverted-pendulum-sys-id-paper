@@ -80,9 +80,13 @@ class DataGenerator(object):
 
         self.actual['x_n'] = self.ref_noise
 
-        # Generate a random platform acceleration input.
-        nums = [7, 11, 16, 25, 38, 61, 103, 131, 151, 181, 313, 523]
-        freq = 2.0 * np.pi * np.array(nums, dtype=float) / 240.0
+        # Generate a random platform acceleration input with bandwidth in
+        # the human control regime.
+        start_freq = 0.03  # hz
+        stop_freq = 2.18  # hz
+
+        freq2 = 2.0 * np.pi * np.logspace(np.log10(start_freq),
+                                          np.log10(stop_freq), num=20)
 
         # NOTE : This function is not deterministic and give different
         # results every call.
