@@ -26,7 +26,7 @@ It is hypothesized that a human operating during the quiet standing task uses
 feedback to remain upright in the face of perturbations. For various reasons,
 it is desirable to obtain mathematical models that predict a human's actuation
 patterns given measured estimates of the sensory information available to the
-human.  Reasonably good models of the human's open loop musculoskeletal system
+human. Reasonably good models of the human's open loop musculoskeletal system
 exist but models of the human's control system and the system process noises
 are still less than adequate. The control model can possibly be derived from
 first principles, but high level understanding of the human's sensory
@@ -35,45 +35,33 @@ neurological first principles. These high level control descriptions may be
 more easily arrived at through identification and learning techniques.
 
 Here we present a numerical study comparing three methods of identifying the
-parameters of a human quiet standing state feedback system. The first method,
-direct identification, is by far the least computationally intensive but
-suffers from bias due to the unknown processes in the modeled
-system~\cite{Kooij2010}. The second method, single shooting, is a typical
-method for parameter identification but is the most computationally intensive
-and often suffers from extreme sensitivity to initial guesses. Finally, the
-third method, which has not been used for control parameter identification in
-biological systems, is direct collocation. We aim to show that direct
-collocation is better suited to control parameter identification because it
-does not suffer from bias, computation times are very reasonable, and it is
-much less sensitive to initial guesses than shooting.
+controller parameters of a human quiet standing state feedback system. The
+first method, direct identification, is by far the least computationally
+intensive but suffers from bias due to the unknown processes in the modeled
+system and neglect of the closed loop in the model~\cite{Kooij2010}. The second
+method, single shooting, is a typical method for parameter identification but
+is the most computationally intensive and often suffers from extreme
+sensitivity to initial guesses. Finally, the third method, which has not been
+used for control parameter identification in biological systems, is direct
+collocation. We aim to show that direct collocation is better suited to control
+parameter identification because it does not suffer from bias because it is
+indirect, computation times are very low, and it is much less sensitive to
+initial guesses than most single shooting methods.
 
 \section{Musculoskeletal Model Description}
-
+%
 We make use of the widely used planar two link inverted pendulum model of human
-quiet standing. In particular, our model matches that described in
+for quiet standing. In particular, our model matches that described in
 \cite{Park2004}. Figure~\ref{fig:free-body-diagram} shows the open loop system.
 The human is modeled by two rigid bodies: the legs and the torso. These are
 connected to each other at the hip joint, modeled as an ideal pin. The legs can
 rotate about a pin joint relative to the ``platform'' and the platform/ankle
 point can be laterally accelerated. The centers of mass of the legs and torso
-are located line connecting the respective pin joints. The muscles are modeled
-as simple joint torque actuators. The orientation of the bodies are described
-by the generalized coordinates $\theta_a$ and $\theta_h$. Gravity acts on the
-bodies in the $-y$ direction. The equations of motion were formed symbolically
-using Kane's Method \cite{Kane1985} using SymPy~\cite{Gede2013}. The model
-derivation is included in the \verb|src/model.py| file and implemented in a
-class named \verb|QuietStandingModel|.
-
-The numerical values of the model constants were estimated using Yeadon's
-method and the software package \verb|yeadon|~\cite{Dembia2014}. The
-measurements are included in \verb|raw-data/yeadon-measurements.yml|.
-Table~\ref{tab:model-constants} reports the computed constants for the model.
-
-% TODO : This is too long!
-\begin{equation}
-  \input{eoms.tex}
-\end{equation}
-
+are located on a line connecting the respective pin joints. The muscles are
+modeled as simple joint torque actuators. The orientation of the bodies are
+described by the generalized coordinates $\theta_a$ and $\theta_h$. Gravity $g$
+acts on the bodies in the $-y$ direction.
+%
 \begin{figure}
   \centering
   \includegraphics{figures/free-body-diagram.pdf}
@@ -81,6 +69,22 @@ Table~\ref{tab:model-constants} reports the computed constants for the model.
   \label{fig:free-body-diagram}
 \end{figure}
 
+The equations of motion were formed symbolically using Kane's
+Method~\cite{Kane1985} using the \verb|mechanics| package in
+SymPy~\cite{Gede2013}. The model derivation is included in the
+\verb|src/model.py| file and implemented in a class named
+\verb|QuietStandingModel|. The non-linear equations of motion take this form:
+% TODO : This is too long!
+\begin{equation}
+  \input{eoms.tex}
+\end{equation}
+
+The numerical values of the open loop model constants were estimated using
+Yeadon's method~\cite{Yeadon1989} and the software package
+\verb|yeadon|~\cite{Dembia2014}. The body geometry measurements are included in
+\verb|raw-data/yeadon-measurements.yml| for a 28 year old male.
+Table~\ref{tab:model-constants} reports the computed constants for the model.
+%
 \begin{table}
   \centering
   \caption{Constant parameters in the plant}
@@ -90,50 +94,82 @@ Table~\ref{tab:model-constants} reports the computed constants for the model.
 
 \section{Control Model Description}
 
-To close the loop, we assume the human's sensors allow for full state feedback.
-There is physicoolgical backing for this assumption but we mostly choose it for
-computational simplicity. Given the state vector:
-
+To close the loop, we assume the human can at least continuously sense the full
+state. There are physiological reasons that back this assumption but we mostly
+choose it for computational simplicity. Given the state vector
+%
 \begin{equation}
-  x = \left[\theta_a \theta_h \omega_a \omega_h \right]^T
+  \mathbf{x} = \left[ \theta_a \quad \theta_h \quad \omega_a \quad \omega_h \right]^T
 \end{equation}
-
-we can close the loop with
-
+%
+we close the loop with
+%
 \begin{equation}
-  T = K * (x_ref - x)
+  \mathbf{T} = \left[ T_a \quad T_h \right]^T = \mathbf{K} (\mathbf{x}_{r} - \mathbf{x})
 \end{equation}
-
-Therefore we create a gain matrix:
-
+%
+where $\mathbf{x}_r$ is the desired reference state and $\mathbf{K}$ is a
+matrix of feedback gains
+%
 \begin{equation}
+  \mathbf{K} =
   \begin{bmatrix}
     k_{00} & k_{01} & k_{02} & k_{03} \\
     k_{10} & k_{11} & k_{12} & k_{13} \\
   \end{bmatrix}
+  .
 \end{equation}
 
-The acceleration $a$ is treated as an exogenous input.
+We also consider a process noise, in our case an additive noise to the state
+error. This primarily represents the human's error in estimating the state and
+change in the desired state, but can also account for modeling errors. With the
+reference noise $\mathbf{x}_n$, plant input becomes
+%
+\begin{equation}
+  \mathbf{T} = \mathbf{K} (\mathbf{x}_{r} + \mathbf{x}_n - \mathbf{x}).
+\end{equation}
 
-We consider a process noise, in our case we add noise to the reference. This
-primarily represents the controller's error in estimatign the state error, but
-can also
+We choose a set of realistic numerical gain values based on those presented in
+\cite{Park2004} that stabilize the non-linear model around the vertical
+equilibrium point:
+%
+\begin{equation}
+  \mathbf{K} =
+  \begin{bmatrix}
+    950.0 & 175.0 & 185.0 & 50.0 \\
+    45.0 & 290.0 & 60.0 & 26.0
+  \end{bmatrix}
+\end{equation}
+
+With the system closed the only inputs are then the acceleration of the
+platform $a$ and the reference noise $\mathbf{x}_n$ and both of which are
+treated as specified exogenous inputs.
 
 \section{Data Measurement}
+%
+There are many likely measurements one can use for identification purposes and
+the different identification methods we propose each require a minimal set of
+measurements. To generate artificial measurements we simulate the closed loop
+system by integrating the explicit first order form of the equations of motion
+forward in time with the variable step integration routine available in
+odepack's \verb|lsoda| routine and accessed through SciPy's integration
+wrappers. We choose the following measurements with optionally additive
+Gaussian measurement noise $v(t, 0, \sigma)$.
+%
+\begin{align}
+  \mathbf{x}_m = \left[ \mathbf{\theta} \quad \mathbf{\omega} \right]^T +
+    \left[\mathbf{v}_{\theta}(0, \sigma_\theta) \quad \mathbf{v}_{\omega}(0,
+    \sigma_\omega)\right]^T \\
+  \mathbf{T}_m = \mathbf{T} + \mathbf{v}_T(0, \sigma_T) \\
+  a_m = a + v_a(0, \sigma_a)
+\end{align}
 
-Several variables are useful as measurements, $y_m$, for identification
-purposes. To obtain the state trajectory under the two exongenous inputs $a$
-and $x_n$, we simulate the system by integrating the first order form of the
-equations of motion forward in time. We use the variable step integration
-routine available in odepack's lsoda routine and acces it through SciPy's
-integration wrappers. The measurements, $y$ are
+We use a sum of sinusoids with a bandwidth designed to fall within the human's
+operating bandwidth for the specified platform acceleration. It is made up of
+twelve sinusoids with fixed frequencies, a fixed amplitude, and randomly
+generated phase shifts between $0$ and $2\pi$. The 12 frequencies are
+logarithmically spaced between 0.03~\si{\hertz} and 2.18~\si{\hertz}.
 
-\begin{equation}
-  y_m(t) = [a(t), x(t), T(x)] + v(t)
-\end{equation}
-
-where v(t) is a random process vector with a mean of zero and standard
-deviation.
 
 \section{Direct Identification}
 
@@ -164,6 +200,7 @@ $\tilde{\mathbf{K}}$: n x m
 \end{equation}
 
 The least squares estimation
+
 
 \section{Indirect Identification: Shooting}
 
